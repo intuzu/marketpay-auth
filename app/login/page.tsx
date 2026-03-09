@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { authService } from '@/lib/auth-service';
 import '@/lib/cognito-config'; // Initialize Amplify
 
@@ -58,7 +59,15 @@ function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-md w-full space-y-8 p-10 bg-white rounded-xl shadow-lg">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">MarketPay</h1>
+          <div className="flex justify-center mb-4">
+            <Image
+              src="/marketpay_logo.webp"
+              alt="MarketPay"
+              width={240}
+              height={68}
+              priority
+            />
+          </div>
           <h2 className="text-2xl font-semibold text-gray-700">Welcome back</h2>
           <p className="mt-2 text-sm text-gray-600">
             Sign in to your account to continue
