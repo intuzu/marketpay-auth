@@ -17,6 +17,24 @@ function LoginForm() {
   const returnTo = searchParams.get('returnTo') || 'https://marketpay.app';
   const organization = searchParams.get('organization');
 
+  // Check for existing session and auto-redirect
+  useEffect(() => {
+    (async () => {
+      try {
+        const session = await authService.getSession();
+        if (session.success && session.session?.tokens?.idToken) {
+          const idToken = session.session.tokens.idToken.toString();
+          const accessToken = session.session.tokens.accessToken?.toString();
+          const redirectUrl = new URL(returnTo);
+          if (idToken) redirectUrl.searchParams.set('id_token', idToken);
+          if (accessToken) redirectUrl.searchParams.set('access_token', accessToken);
+          if (organization) redirectUrl.searchParams.set('organization', organization);
+          window.location.href = redirectUrl.toString();
+        }
+      } catch {}
+    })();
+  }, [returnTo, organization]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');

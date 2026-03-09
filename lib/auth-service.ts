@@ -96,6 +96,9 @@ class AuthService {
 
   async signIn({ username, password }: SignInParams) {
     try {
+      // Clear any stale session so Amplify doesn't throw "already signed in"
+      try { await signOut(); } catch {}
+
       const { isSignedIn, nextStep } = await signIn({
         username,
         password,
