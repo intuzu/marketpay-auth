@@ -1,0 +1,70 @@
+name: Build and Push Auth to ECR
+
+on:
+  push:
+    branches: ["main", "master", "dev"]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_AUTH_DEV: mp2-auth/dev
+  ECR_AUTH_MAIN: mp2-auth/main
+
+jobs:
+  build-and-push-auth:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set branch-specific env
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/dev" ]]; then
+            echo "ECR_AUTH=${ECR_AUTH_DEV}" >> $GITHUB_ENV
+          else
+            echo "ECR_AUTH=${ECR_AUTH_MAIN}" >> $GITHUB_ENV
+          fi
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get AWS Account ID
+        run: echo "AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+
+      - name: Set ECR repository URI
+        run: echo "ECR_REPOSITORY_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_AUTH}" >> $GITHUB_ENV
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Ensure ECR repository exists
+        run: |
+          REPO_URI="$ECR_REPOSITORY_URI"
+          REPO_NAME="${REPO_URI#${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/}"
+          aws ecr describe-repositories --repository-names "$REPO_NAME" >/dev/null 2>&1 || \
+            aws ecr create-repository --repository-name "$REPO_NAME" >/dev/null
+
+      - name: Build Auth image
+        run: |
+          export DOCKER_BUILDKIT=1
+          DF="Dockerfile"
+          CTX="."
+          echo "Using Dockerfile=$DF context=$CTX"
+
+          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
+          BRANCH_TAG=${GITHUB_REF_NAME//\//-}
+          docker build -f "$DF" "$CTX" \
+            -t "${ECR_REPOSITORY_URI}:latest" \
+            -t "${ECR_REPOSITORY_URI}:${BRANCH_TAG}" \
+            -t "${ECR_REPOSITORY_URI}:${SHORT_SHA}"
+
+      - name: Push Auth images
+        run: |
+          docker push "${ECR_REPOSITORY_URI}:latest"
+          docker push "${ECR_REPOSITORY_URI}:${GITHUB_REF_NAME//\//-}"
+          docker push "${ECR_REPOSITORY_URI}:$(echo ${GITHUB_SHA} | cut -c1-7)"
