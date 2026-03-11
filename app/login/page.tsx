@@ -17,8 +17,10 @@ function LoginForm() {
   const returnTo = searchParams.get('returnTo') || 'https://marketpay.app';
   const organization = searchParams.get('organization');
 
-  // Check for existing session and auto-redirect
+  // Check for existing session and auto-redirect (skip if prompt=login forces fresh login)
+  const prompt = searchParams.get('prompt');
   useEffect(() => {
+    if (prompt === 'login') return; // User explicitly wants to re-enter credentials
     (async () => {
       try {
         const session = await authService.getSession();
@@ -33,7 +35,7 @@ function LoginForm() {
         }
       } catch {}
     })();
-  }, [returnTo, organization]);
+  }, [returnTo, organization, prompt]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -136,7 +136,7 @@ class AuthService {
 
   async signOut() {
     try {
-      await signOut();
+      await signOut({ global: true });
       return {
         success: true,
       };
